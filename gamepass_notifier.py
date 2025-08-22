@@ -11,10 +11,15 @@ class GamePassNotifier:
     def __init__(self):
         # GitHub Secrets에서 환경변수 읽기
         self.smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
-        self.smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_port_str = os.environ.get('SMTP_PORT', '587')
+        self.smtp_port = int(smtp_port_str) if smtp_port_str and smtp_port_str.strip() else 587
         self.sender_email = os.environ.get('SENDER_EMAIL')
         self.sender_password = os.environ.get('SENDER_PASSWORD')
         self.receiver_email = os.environ.get('RECEIVER_EMAIL')
+        
+        # 필수 설정 확인
+        if not all([self.sender_email, self.sender_password, self.receiver_email]):
+            raise ValueError("필수 이메일 설정이 누락되었습니다. GitHub Secrets를 확인해주세요.")
         
         self.rss_url = "https://news.xbox.com/en-us/feed/"
         self.seen_articles_file = "seen_articles.json"
@@ -231,4 +236,4 @@ class GamePassNotifier:
 
 if __name__ == "__main__":
     notifier = GamePassNotifier()
-    notifier.run() 
+    notifier.run()
