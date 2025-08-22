@@ -1,0 +1,48 @@
+name: Game Pass Notifier
+
+on:
+  schedule:
+    # 매일 한국시간 오전 9시 (UTC 0시)에 실행
+    - cron: '0 0 * * *'
+  
+  # 수동 실행 가능
+  workflow_dispatch:
+
+jobs:
+  check-gamepass:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 저장소 체크아웃
+      uses: actions/checkout@v4
+      with:
+        # seen_articles.json 파일 변경사항을 커밋하기 위해 필요
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Python 환경 설정
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 의존성 설치
+      run: |
+        pip install feedparser
+    
+    - name: Game Pass 체크 및 알림 실행
+      env:
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+        RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+      run: |
+        python gamepass_notifier.py
+    
+    - name: 변경사항 커밋
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add seen_articles.json
+        git diff --staged --quiet || git commit -m "업데이트: 확인한 기사 목록 갱신 [skip ci]"
+        git push
+      continue-on-error: true
