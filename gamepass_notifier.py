@@ -43,14 +43,6 @@ class GamePassNotifier:
         self.sender_password = os.environ['SENDER_PASSWORD']
         self.receiver_email = os.environ['RECEIVER_EMAIL']
         
-        # 더 다양한 RSS 소스 사용 (Xbox 공식이 막힐 경우 대안)
-        self.rss_urls = [
-            "https://feeds.feedburner.com/XboxLivesMajorNelson",  # Major Nelson's blog
-            "https://www.trueachievements.com/rss/news.aspx",     # TrueAchievements
-            "https://news.xbox.com/en-us/feed/",                  # Xbox 공식 (여전히 시도)
-            "https://www.gamespot.com/feeds/game-news/",          # GameSpot
-            "https://www.polygon.com/rss/xbox/index.xml"          # Polygon Xbox
-        ]
         self.seen_articles_file = "seen_articles.json"
         self.config = self.load_config()
         self.save_seen_articles(set())
@@ -68,26 +60,33 @@ class GamePassNotifier:
 
     def load_config(self):
         return {
-            "gamepass_keywords": [
-                "game pass", "gamepass", "xbox game pass", "pc game pass",
-                "coming to game pass", "leaving game pass",
-                "available now on game pass", "joins game pass",
-                "say goodbye", "day one", "hollow knight", "silksong"
+            # 게임 추가 관련 키워드 (더 구체적으로)
+            "addition_keywords": [
+                "coming to game pass", "coming to xbox game pass", "coming to pc game pass",
+                "available now on game pass", "available on game pass", "available in game pass",
+                "joins game pass", "join game pass", "joining game pass",
+                "added to game pass", "arrives on game pass",
+                "day one game pass", "day 1 game pass",
+                "launches on game pass", "launch on game pass",
+                "debuts on game pass", "debut on game pass"
             ],
+            # 게임 제거 관련 키워드
+            "removal_keywords": [
+                "leaving game pass", "leaving xbox game pass", "leaving pc game pass",
+                "removed from game pass", "say goodbye", "final days",
+                "last chance game pass", "departing game pass",
+                "farewell game pass", "exit game pass"
+            ],
+            # 정확한 패턴 매칭 (더 엄격하게)
             "add_patterns": [
-                r'coming to (?:xbox )?game pass',
-                r'available (?:now )?(?:on|in) (?:xbox )?game pass',
-                r'joins? (?:xbox )?game pass',
-                r'new.*(?:xbox )?game pass',
-                r'day one (?:on|with) (?:xbox )?game pass',
-                r'added to (?:xbox )?game pass'
+                r'(?:coming to|available (?:now )?(?:on|in)|joins?|added to|arrives? (?:on|to)|launches? (?:on|to)|debuts? (?:on|to)).*(?:xbox )?game pass',
+                r'day (?:one|1).*(?:xbox )?game pass',
+                r'(?:xbox )?game pass.*(?:coming to|available|joins?|added|arrives?|launches?|debuts?)'
             ],
             "remove_patterns": [
-                r'leaving (?:xbox )?game pass',
-                r'last chance.*(?:xbox )?game pass',
-                r'say goodbye',
-                r'final days',
-                r'removed from (?:xbox )?game pass'
+                r'(?:leaving|removed from|departing|exit(?:ing)?).*(?:xbox )?game pass',
+                r'(?:say goodbye|farewell|final days|last chance).*(?:xbox )?game pass',
+                r'(?:xbox )?game pass.*(?:leaving|removed|departing|exit)'
             ]
         }
 
