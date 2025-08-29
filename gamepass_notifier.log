@@ -30,3 +30,26 @@
 2025-08-29 20:13:08,539 [ERROR] 실행 중 오류: 'dict' object has no attribute 'entries'
 2025-08-29 20:13:08,539 [INFO] 확인한 기사 0개 저장 완료
 2025-08-29 20:13:08,539 [INFO] 처리 완료!
+2025-08-29 20:16:08,393 [INFO] 확인한 기사 0개 저장 완료
+2025-08-29 20:16:08,393 [INFO] Game Pass RSS 피드 확인 시작...
+2025-08-29 20:16:08,393 [INFO] 기존 확인한 기사: 0개
+2025-08-29 20:16:08,393 [INFO] 시도 중인 RSS 피드: https://feeds.feedburner.com/XboxLivesMajorNelson
+2025-08-29 20:16:10,222 [INFO] 성공: https://feeds.feedburner.com/XboxLivesMajorNelson에서 12개 기사 발견
+2025-08-29 20:16:10,222 [INFO] 시도 중인 RSS 피드: https://www.trueachievements.com/rss/news.aspx
+2025-08-29 20:16:11,898 [WARNING] 403 Forbidden: https://www.trueachievements.com/rss/news.aspx - 다음 피드로 이동
+2025-08-29 20:16:11,899 [INFO] 시도 중인 RSS 피드: https://news.xbox.com/en-us/feed/
+2025-08-29 20:16:13,942 [WARNING] 403 Forbidden: https://news.xbox.com/en-us/feed/ - 다음 피드로 이동
+2025-08-29 20:16:13,942 [INFO] 시도 중인 RSS 피드: https://www.gamespot.com/feeds/game-news/
+2025-08-29 20:16:16,521 [INFO] 성공: https://www.gamespot.com/feeds/game-news/에서 15개 기사 발견
+2025-08-29 20:16:16,521 [INFO] 시도 중인 RSS 피드: https://www.polygon.com/rss/index.xml
+2025-08-29 20:16:17,874 [INFO] 성공: https://www.polygon.com/rss/index.xml에서 10개 기사 발견
+2025-08-29 20:16:17,874 [INFO] 총 3개 피드에서 37개 기사 수집 완료
+2025-08-29 20:16:17,875 [INFO] Game Pass 관련 기사 발견: Wuchang 8BitDo Ultimate 2 Wireless Controller Gets...
+2025-08-29 20:16:17,876 [INFO] Game Pass 관련 기사 발견: Xbox Is Making It Easier To Pick Back Up Games On ...
+2025-08-29 20:16:17,877 [INFO] Game Pass 관련 기사 발견: 3 Game Pass games you need to play this weekend (L...
+2025-08-29 20:16:17,877 [INFO] 총 37개 기사 처리, 3개 새 Game Pass 기사 발견
+2025-08-29 20:16:17,877 [INFO] 3개 새 기사 발견, 이메일 발송 중...
+2025-08-29 20:16:19,151 [INFO] 이메일 발송 성공: 3개 기사
+2025-08-29 20:16:19,152 [INFO] 이메일 발송 성공
+2025-08-29 20:16:19,152 [INFO] 확인한 기사 3개 저장 완료
+2025-08-29 20:16:19,152 [INFO] 처리 완료!
