@@ -1,0 +1,55 @@
+2025-08-29 20:24:30,224 [INFO] 확인한 기사 0개 저장 완료
+2025-08-29 20:24:30,224 [INFO] Game Pass RSS 피드 확인 시작...
+2025-08-29 20:24:30,224 [INFO] 기존 확인한 기사: 0개
+2025-08-29 20:24:30,224 [INFO] 시도 중인 RSS 피드: https://feeds.feedburner.com/XboxLivesMajorNelson
+2025-08-29 20:24:33,530 [INFO] 성공: https://feeds.feedburner.com/XboxLivesMajorNelson에서 12개 기사 발견
+2025-08-29 20:24:33,530 [INFO] 시도 중인 RSS 피드: https://www.trueachievements.com/rss/news.aspx
+2025-08-29 20:24:36,384 [WARNING] 403 Forbidden: https://www.trueachievements.com/rss/news.aspx - 다음 피드로 이동
+2025-08-29 20:24:36,384 [INFO] 시도 중인 RSS 피드: https://news.xbox.com/en-us/feed/
+2025-08-29 20:24:38,519 [WARNING] 403 Forbidden: https://news.xbox.com/en-us/feed/ - 다음 피드로 이동
+2025-08-29 20:24:38,520 [INFO] 시도 중인 RSS 피드: https://www.gamespot.com/feeds/game-news/
+2025-08-29 20:24:40,911 [INFO] 성공: https://www.gamespot.com/feeds/game-news/에서 15개 기사 발견
+2025-08-29 20:24:40,911 [INFO] 시도 중인 RSS 피드: https://www.polygon.com/rss/index.xml
+2025-08-29 20:24:42,675 [INFO] 성공: https://www.polygon.com/rss/index.xml에서 10개 기사 발견
+2025-08-29 20:24:42,675 [INFO] 총 3개 피드에서 37개 기사 수집 완료
+2025-08-29 20:24:42,675 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,675 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,675 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,675 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,675 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,676 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,677 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [ERROR] 기사 처리 중 오류: 'gamepass_keywords'
+2025-08-29 20:24:42,678 [INFO] 총 37개 기사 처리, 0개 새 Game Pass 기사 발견
+2025-08-29 20:24:42,678 [INFO] 새로운 Game Pass 소식 없음
+2025-08-29 20:24:42,679 [INFO] 확인한 기사 0개 저장 완료
+2025-08-29 20:24:42,679 [INFO] 처리 완료!
