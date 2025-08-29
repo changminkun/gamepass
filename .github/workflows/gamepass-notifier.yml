@@ -3,10 +3,10 @@ name: Game Pass Notifier
 on:
   schedule:
     - cron: '0 0,6,12 * * *'  # 매일 09:00, 15:00, 21:00 KST
-  workflow_dispatch:  # 수동 실행 허용
+  workflow_dispatch:
 
 permissions:
-  contents: write  # seen_articles.json 쓰기 권한
+  contents: write
 
 jobs:
   check-gamepass:
@@ -34,12 +34,12 @@ jobs:
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
 
-      - name: Commit and push seen_articles.json
+      - name: Commit and push seen_articles.json and logs
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add seen_articles.json
-          git diff --staged --quiet || git commit -m "업데이트: 확인한 기사 목록 갱신 [skip ci]"
+          git add seen_articles.json gamepass_notifier.log
+          git diff --staged --quiet || git commit -m "업데이트: 확인한 기사 목록 및 로그 갱신 [skip ci]"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
