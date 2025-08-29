@@ -13,6 +13,7 @@ from requests.exceptions import RequestException
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urlunparse
 import xml.etree.ElementTree as ET
+import random
 try:
     from bs4 import BeautifulSoup
 except ImportError:
@@ -42,13 +43,17 @@ class GamePassNotifier:
         self.sender_password = os.environ['SENDER_PASSWORD']
         self.receiver_email = os.environ['RECEIVER_EMAIL']
         
+        # 더 다양한 RSS 소스 사용 (Xbox 공식이 막힐 경우 대안)
         self.rss_urls = [
-            "https://news.xbox.com/en-us/feed/",
-            "https://news.xbox.com/en-us/xbox-game-pass/"
+            "https://feeds.feedburner.com/XboxLivesMajorNelson",  # Major Nelson's blog
+            "https://www.trueachievements.com/rss/news.aspx",     # TrueAchievements
+            "https://news.xbox.com/en-us/feed/",                  # Xbox 공식 (여전히 시도)
+            "https://www.gamespot.com/feeds/game-news/",          # GameSpot
+            "https://www.polygon.com/rss/xbox/index.xml"          # Polygon Xbox
         ]
         self.seen_articles_file = "seen_articles.json"
         self.config = self.load_config()
-        self.save_seen_articles(set())  # 초기 빈 파일 생성
+        self.save_seen_articles(set())
 
     def setup_logging(self):
         logging.basicConfig(
@@ -86,32 +91,88 @@ class GamePassNotifier:
             ]
         }
 
-    def fetch_rss_feed(self, retries=3, delay=5):
+    def get_random_headers(self):
+        """다양한 User-Agent와 헤더를 랜덤하게 선택"""
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0'
+        ]
+        
+        return {
+            'User-Agent': random.choice(user_agents),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+        }
+
+    def fetch_rss_feed(self, retries=2, delay=3):
+        """RSS 피드를 가져오는 함수. 실패한 피드는 건너뛰고 계속 진행"""
         all_entries = []
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        successful_feeds = 0
+        
         for url in self.rss_urls:
+            self.logger.info(f"시도 중인 RSS 피드: {url}")
+            
             for attempt in range(retries):
                 try:
-                    response = requests.get(url, headers=headers, timeout=10)
+                    headers = self.get_random_headers()
+                    # 요청 간 랜덤 지연
+                    time.sleep(random.uniform(1, 3))
+                    
+                    session = requests.Session()
+                    response = session.get(url, headers=headers, timeout=15, allow_redirects=True)
+                    
+                    if response.status_code == 403:
+                        self.logger.warning(f"403 Forbidden: {url} - 다음 피드로 이동")
+                        break  # 403이면 재시도하지 않고 다음 URL로
+                    
                     response.raise_for_status()
+                    
+                    # XML 유효성 검사
                     try:
-                        ET.fromstring(response.text)  # XML 유효성 검사
-                        self.logger.debug(f"RSS 피드 응답 (처음 500자): {response.text[:500]}")
+                        ET.fromstring(response.text)
                     except ET.ParseError as xml_err:
                         self.logger.error(f"RSS 피드 XML 파싱 오류 ({url}): {xml_err}")
-                        raise ValueError(f"XML 파싱 오류: {xml_err}")
+                        if attempt < retries - 1:
+                            continue
+                        else:
+                            break
+                    
+                    # feedparser로 파싱
                     feed = self.feed_parser.parse(response.text, request_headers=headers)
+                    
                     if feed.bozo:
-                        raise ValueError(f"RSS 피드 파싱 오류 ({url}): {feed.bozo_exception}")
-                    self.logger.info(f"📡 {url}에서 {len(feed.entries)}개 기사 발견: {[entry.title for entry in feed.entries]}")
+                        self.logger.warning(f"RSS 피드 파싱 경고 ({url}): {feed.bozo_exception}")
+                        # bozo 오류여도 entries가 있으면 계속 진행
+                        if not feed.entries:
+                            if attempt < retries - 1:
+                                continue
+                            else:
+                                break
+                    
+                    self.logger.info(f"성공: {url}에서 {len(feed.entries)}개 기사 발견")
                     all_entries.extend(feed.entries)
-                    break
-                except (RequestException, ValueError) as e:
-                    self.logger.error(f"RSS 피드 가져오기 실패 ({url}, 시도 {attempt + 1}/{retries}): {e}")
+                    successful_feeds += 1
+                    break  # 성공하면 다음 URL로
+                    
+                except requests.exceptions.RequestException as e:
+                    self.logger.error(f"RSS 피드 요청 실패 ({url}, 시도 {attempt + 1}/{retries}): {e}")
                     if attempt < retries - 1:
                         time.sleep(delay)
                     else:
                         self.logger.warning(f"{url}에서 데이터 가져오기 최종 실패")
+                except Exception as e:
+                    self.logger.error(f"RSS 피드 처리 중 예상치 못한 오류 ({url}): {e}")
+                    break
+        
+        self.logger.info(f"총 {successful_feeds}개 피드에서 {len(all_entries)}개 기사 수집 완료")
+        
         return {'entries': all_entries} if all_entries else None
 
     def normalize_url(self, url):
@@ -138,6 +199,7 @@ class GamePassNotifier:
                     if isinstance(data, list):
                         self.logger.warning("seen_articles.json이 리스트 형식이므로 초기화합니다.")
                         return set()
+                    # 30일 이상된 기사는 제거
                     cutoff = (datetime.now() - timedelta(days=30)).timestamp()
                     return set(link for link, timestamp in data.items() 
                                if isinstance(timestamp, (int, float)) and datetime.fromtimestamp(timestamp).timestamp() > cutoff)
@@ -151,40 +213,47 @@ class GamePassNotifier:
             data = {link: datetime.now().timestamp() for link in seen_articles}
             with open(self.seen_articles_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-            self.logger.info(f"✅ 확인한 기사 {len(seen_articles)}개 저장 완료")
+            self.logger.info(f"확인한 기사 {len(seen_articles)}개 저장 완료")
         except Exception as e:
             self.logger.error(f"파일 저장 오류: {e}")
 
     def is_gamepass_related(self, title, summary):
-        text = (title + " " + summary).lower()
+        text = (title + " " + (summary or "")).lower()
         is_related = any(keyword in text for keyword in self.config['gamepass_keywords'])
-        self.logger.info(f"기사: {title[:50]}... Game Pass 관련={is_related}")
+        if is_related:
+            self.logger.info(f"Game Pass 관련 기사 발견: {title[:50]}...")
         return is_related
 
     def extract_game_info(self, title, summary):
-        text = (title + " " + summary).lower()
-        is_addition = any(re.search(pattern, text) for pattern in self.config['add_patterns'])
-        is_removal = any(re.search(pattern, text) for pattern in self.config['remove_patterns'])
-        self.logger.info(f"기사: {title[:50]}... 추가={is_addition}, 제거={is_removal}")
+        text = (title + " " + (summary or "")).lower()
+        is_addition = any(re.search(pattern, text, re.IGNORECASE) for pattern in self.config['add_patterns'])
+        is_removal = any(re.search(pattern, text, re.IGNORECASE) for pattern in self.config['remove_patterns'])
         return is_addition, is_removal
 
     def process_article(self, entry, seen_articles):
-        article_id = self.normalize_url(entry.link)
-        if article_id in seen_articles:
-            self.logger.info(f"⏭️ 중복 기사 스킵: {entry.title[:50]}... ({article_id})")
+        try:
+            article_id = self.normalize_url(entry.link)
+            if article_id in seen_articles:
+                return None
+            
+            summary = getattr(entry, 'summary', '') or getattr(entry, 'description', '') or ''
+            
+            if not self.is_gamepass_related(entry.title, summary):
+                return None
+                
+            is_addition, is_removal = self.extract_game_info(entry.title, summary)
+            
+            return {
+                'title': entry.title,
+                'link': entry.link,
+                'published': getattr(entry, 'published', '날짜 불명'),
+                'summary': self.truncate_summary(summary),
+                'is_addition': is_addition,
+                'is_removal': is_removal
+            }
+        except Exception as e:
+            self.logger.error(f"기사 처리 중 오류: {e}")
             return None
-        if not self.is_gamepass_related(entry.title, entry.summary):
-            self.logger.info(f"🚫 Game Pass 관련 아님: {entry.title[:50]}...")
-            return None
-        is_addition, is_removal = self.extract_game_info(entry.title, entry.summary)
-        return {
-            'title': entry.title,
-            'link': entry.link,
-            'published': getattr(entry, 'published', '날짜 불명'),
-            'summary': self.truncate_summary(entry.summary),
-            'is_addition': is_addition,
-            'is_removal': is_removal
-        }
 
     def create_email_content(self, articles):
         lang = os.environ.get('LANGUAGE', 'ko')
@@ -231,16 +300,16 @@ class GamePassNotifier:
         for article in articles:
             tags_html = ""
             if article['is_addition']:
-                tags_html += '<span class="tag tag-addition">✅ 게임 추가</span>'
+                tags_html += '<span class="tag tag-addition">게임 추가</span>'
             if article['is_removal']:
-                tags_html += '<span class="tag tag-removal">⏰ 게임 제거</span>'
+                tags_html += '<span class="tag tag-removal">게임 제거</span>'
             html += f"""
                     <div class="article">
                         <div class="article-title">{article['title']}</div>
-                        <div class="article-meta">📅 {article['published']}</div>
+                        <div class="article-meta">{article['published']}</div>
                         <div class="tags">{tags_html}</div>
                         <div class="article-summary">{article['summary']}</div>
-                        <a href="{article['link']}" class="article-link">전체 기사 보기 →</a>
+                        <a href="{article['link']}" class="article-link">전체 기사 보기</a>
                     </div>
             """
         html += f"""
@@ -252,29 +321,23 @@ class GamePassNotifier:
         </body>
         </html>
         """
-        if BeautifulSoup:
-            try:
-                BeautifulSoup(html, 'html.parser')
-            except Exception as e:
-                self.logger.error(f"HTML 파싱 오류: {e}")
-                raise
         return html
 
     def load_email_template(self, lang='ko'):
         templates = {
             'ko': {
-                'subject': "🎮 Game Pass 업데이트 알림 - {count}개 소식",
-                'header': "🎮 Xbox Game Pass",
+                'subject': "Game Pass 업데이트 알림 - {count}개 소식",
+                'header': "Xbox Game Pass",
                 'subheader': "새로운 업데이트가 있습니다!",
-                'stats': "📊 총 {count}개의 새로운 소식",
-                'footer': "🤖 GitHub Actions 자동 알림<br>매일 한국 시간 오전 9시, 오후 3시, 오후 9시에 자동으로 확인합니다.<br>Game Pass 게임 목록 변화만 선별하여 알려드립니다."
+                'stats': "총 {count}개의 새로운 소식",
+                'footer': "GitHub Actions 자동 알림<br>매일 한국 시간 오전 9시, 오후 3시, 오후 9시에 자동으로 확인합니다.<br>Game Pass 게임 목록 변화만 선별하여 알려드립니다."
             },
             'en': {
-                'subject': "🎮 Game Pass Update - {count} New Items",
-                'header': "🎮 Xbox Game Pass",
+                'subject': "Game Pass Update - {count} New Items",
+                'header': "Xbox Game Pass",
                 'subheader': "New updates are here!",
-                'stats': "📊 {count} new updates",
-                'footer': "🤖 Automated GitHub Actions Notification<br>Checked daily at 9 AM, 3 PM, 9 PM KST.<br>Curated updates for Game Pass changes."
+                'stats': "{count} new updates",
+                'footer': "Automated GitHub Actions Notification<br>Checked daily at 9 AM, 3 PM, 9 PM KST.<br>Curated updates for Game Pass changes."
             }
         }
         return templates.get(lang, templates['ko'])
@@ -283,7 +346,7 @@ class GamePassNotifier:
         for attempt in range(retries):
             try:
                 msg = MIMEMultipart('alternative')
-                msg['Subject'] = f"🎮 Game Pass 업데이트 알림 - {len(articles)}개 소식"
+                msg['Subject'] = f"Game Pass 업데이트 알림 - {len(articles)}개 소식"
                 msg['From'] = self.sender_email
                 msg['To'] = self.receiver_email
                 html_content = self.create_email_content(articles)
@@ -293,48 +356,60 @@ class GamePassNotifier:
                     server.starttls()
                     server.login(self.sender_email, self.sender_password)
                     server.send_message(msg)
-                self.logger.info(f"✅ 이메일 발송 성공: {len(articles)}개 기사")
+                self.logger.info(f"이메일 발송 성공: {len(articles)}개 기사")
                 return True
             except smtplib.SMTPException as smtp_err:
-                self.logger.error(f"❌ SMTP 오류 (시도 {attempt + 1}/{retries}): {smtp_err}")
+                self.logger.error(f"SMTP 오류 (시도 {attempt + 1}/{retries}): {smtp_err}")
                 if attempt < retries - 1:
                     time.sleep(delay)
             except Exception as e:
-                self.logger.error(f"❌ 이메일 발송 중 기타 오류 (시도 {attempt + 1}/{retries}): {e}")
+                self.logger.error(f"이메일 발송 중 기타 오류 (시도 {attempt + 1}/{retries}): {e}")
                 if attempt < retries - 1:
                     time.sleep(delay)
-        self.logger.error("❌ 최대 재시도 횟수 초과")
+        self.logger.error("최대 재시도 횟수 초과")
         return False
 
     def run(self):
-        self.logger.info("🔍 Game Pass RSS 피드 확인 시작...")
+        self.logger.info("Game Pass RSS 피드 확인 시작...")
+        seen_articles = set()
+        
         try:
             seen_articles = self.load_seen_articles()
-            self.logger.info(f"📚 기존 확인한 기사: {len(seen_articles)}개")
+            self.logger.info(f"기존 확인한 기사: {len(seen_articles)}개")
+            
             feed = self.fetch_rss_feed()
             if not feed or not feed.entries:
-                self.logger.warning("📭 RSS 피드 가져오기 실패 또는 빈 피드, 처리 중단")
+                self.logger.warning("RSS 피드 가져오기 실패 또는 빈 피드")
                 self.save_seen_articles(seen_articles)
                 return
+            
             new_articles = []
-            with ThreadPoolExecutor(max_workers=4) as executor:
-                results = executor.map(lambda entry: self.process_article(entry, seen_articles), feed.entries[:50])
-                new_articles = [result for result in results if result]
-            for article in new_articles:
-                seen_articles.add(self.normalize_url(article['link']))
+            processed_count = 0
+            
+            # 최신 50개 기사만 처리
+            for entry in feed.entries[:50]:
+                processed_count += 1
+                result = self.process_article(entry, seen_articles)
+                if result:
+                    new_articles.append(result)
+                    seen_articles.add(self.normalize_url(result['link']))
+            
+            self.logger.info(f"총 {processed_count}개 기사 처리, {len(new_articles)}개 새 Game Pass 기사 발견")
+            
             if new_articles:
-                self.logger.info(f"📧 {len(new_articles)}개 새 기사 발견, 이메일 발송 중...")
+                self.logger.info(f"{len(new_articles)}개 새 기사 발견, 이메일 발송 중...")
                 if self.send_email(new_articles):
-                    self.logger.info("✅ 이메일 발송 성공")
+                    self.logger.info("이메일 발송 성공")
                 else:
-                    self.logger.error("❌ 이메일 발송 실패")
+                    self.logger.error("이메일 발송 실패")
             else:
-                self.logger.info("📭 새로운 Game Pass 소식 없음")
-            self.save_seen_articles(seen_articles)
-            self.logger.info("✅ 처리 완료!")
+                self.logger.info("새로운 Game Pass 소식 없음")
+                
         except Exception as e:
-            self.logger.error(f"❌ 실행 중 오류: {e}")
-            self.save_seen_articles(seen_articles)  # 오류 발생 시에도 저장
+            self.logger.error(f"실행 중 오류: {e}")
+        finally:
+            self.save_seen_articles(seen_articles)
+            self.logger.info("처리 완료!")
 
     def test_email(self):
         test_article = [{
