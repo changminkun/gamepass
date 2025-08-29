@@ -16,7 +16,7 @@ from urllib.parse import urlparse, urlunparse
 try:
     from bs4 import BeautifulSoup
 except ImportError:
-    BeautifulSoup = None  # BeautifulSoup 없어도 동작하도록 처리
+    BeautifulSoup = None
 
 class GamePassNotifier:
     def __init__(self, smtp_client=None, feed_parser=None, file_handler=None):
@@ -25,7 +25,6 @@ class GamePassNotifier:
         self.feed_parser = feed_parser or feedparser
         self.file_handler = file_handler or {'load': self.load_seen_articles, 'save': self.save_seen_articles}
         
-        # 환경 변수 유효성 검사
         required_envs = ['SMTP_SERVER', 'SMTP_PORT', 'SENDER_EMAIL', 'SENDER_PASSWORD', 'RECEIVER_EMAIL']
         missing = [env for env in required_envs if not os.environ.get(env)]
         if missing:
@@ -62,34 +61,29 @@ class GamePassNotifier:
         self.logger = logging.getLogger(__name__)
 
     def load_config(self):
-        try:
-            with open('config.json', 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            self.logger.error(f"설정 파일 로드 실패: {e}")
-            return {
-                "gamepass_keywords": [
-                    "game pass", "gamepass", "xbox game pass", "pc game pass",
-                    "coming to game pass", "leaving game pass",
-                    "available now on game pass", "joins game pass",
-                    "say goodbye", "day one", "hollow knight", "silksong"
-                ],
-                "add_patterns": [
-                    r'coming to (?:xbox )?game pass',
-                    r'available (?:now )?(?:on|in) (?:xbox )?game pass',
-                    r'joins? (?:xbox )?game pass',
-                    r'new.*(?:xbox )?game pass',
-                    r'day one (?:on|with) (?:xbox )?game pass',
-                    r'added to (?:xbox )?game pass'
-                ],
-                "remove_patterns": [
-                    r'leaving (?:xbox )?game pass',
-                    r'last chance.*(?:xbox )?game pass',
-                    r'say goodbye',
-                    r'final days',
-                    r'removed from (?:xbox )?game pass'
-                ]
-            }
+        return {
+            "gamepass_keywords": [
+                "game pass", "gamepass", "xbox game pass", "pc game pass",
+                "coming to game pass", "leaving game pass",
+                "available now on game pass", "joins game pass",
+                "say goodbye", "day one", "hollow knight", "silksong"
+            ],
+            "add_patterns": [
+                r'coming to (?:xbox )?game pass',
+                r'available (?:now )?(?:on|in) (?:xbox )?game pass',
+                r'joins? (?:xbox )?game pass',
+                r'new.*(?:xbox )?game pass',
+                r'day one (?:on|with) (?:xbox )?game pass',
+                r'added to (?:xbox )?game pass'
+            ],
+            "remove_patterns": [
+                r'leaving (?:xbox )?game pass',
+                r'last chance.*(?:xbox )?game pass',
+                r'say goodbye',
+                r'final days',
+                r'removed from (?:xbox )?game pass'
+            ]
+        }
 
     def load_email_template(self, lang='ko'):
         templates = {
@@ -112,19 +106,17 @@ class GamePassNotifier:
 
     def fetch_rss_feed(self, retries=3, delay=5):
         all_entries = []
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
         for url in self.rss_urls:
             for attempt in range(retries):
                 try:
-                    response = requests.head(url, timeout=5)
-                    if response.status_code != 200:
-                        raise RequestException(f"RSS 피드 URL 상태 코드 ({url}): {response.status_code}")
-                    feed = self.feed_parser.parse(url)
+                    feed = self.feed_parser.parse(url, request_headers=headers)
                     if feed.bozo:
                         raise ValueError(f"RSS 피드 파싱 오류 ({url}): {feed.bozo_exception}")
                     self.logger.info(f"📡 {url}에서 {len(feed.entries)}개 기사 발견: {[entry.title for entry in feed.entries]}")
                     all_entries.extend(feed.entries)
                     break
-                except (RequestException, ValueError) as e:
+                except Exception as e:
                     self.logger.error(f"RSS 피드 가져오기 실패 ({url}, 시도 {attempt + 1}/{retries}): {e}")
                     if attempt < retries - 1:
                         time.sleep(delay)
@@ -151,12 +143,16 @@ class GamePassNotifier:
             if os.path.exists(self.seen_articles_file):
                 with open(self.seen_articles_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                    if isinstance(data, list):  # 리스트 형식 호환
+                        self.logger.warning("seen_articles.json이 리스트 형식이므로 초기화합니다.")
+                        return set()
                     cutoff = (datetime.now() - timedelta(days=30)).timestamp()
                     return set(link for link, timestamp in data.items() 
-                               if datetime.fromtimestamp(timestamp).timestamp() > cutoff)
+                               if isinstance(timestamp, (int, float)) and datetime.fromtimestamp(timestamp).timestamp() > cutoff)
+            return set()
         except Exception as e:
             self.logger.error(f"기존 데이터 로드 실패: {e}")
-        return set()
+            return set()
 
     def save_seen_articles(self, seen_articles):
         try:
@@ -240,7 +236,6 @@ class GamePassNotifier:
                         <small>{datetime.now().strftime('%Y년 %m월 %d일')}</small>
                     </div>
         """
-        
         for article in articles:
             tags_html = ""
             if article['is_addition']:
@@ -257,7 +252,6 @@ class GamePassNotifier:
                         <a href="{article['link']}" class="article-link">전체 기사 보기 →</a>
                     </div>
             """
-        
         html += f"""
                     <div class="footer">
                         <p>{template['footer']}</p>
@@ -269,7 +263,7 @@ class GamePassNotifier:
         """
         if BeautifulSoup:
             try:
-                BeautifulSoup(html, 'html.parser')  # HTML 유효성 검사
+                BeautifulSoup(html, 'html.parser')
             except Exception as e:
                 self.logger.error(f"HTML 파싱 오류: {e}")
                 raise
@@ -282,19 +276,15 @@ class GamePassNotifier:
                 msg['Subject'] = f"🎮 Game Pass 업데이트 알림 - {len(articles)}개 소식"
                 msg['From'] = self.sender_email
                 msg['To'] = self.receiver_email
-                
                 html_content = self.create_email_content(articles)
                 html_part = MIMEText(html_content, 'html', 'utf-8')
                 msg.attach(html_part)
-                
                 with self.smtp_client(self.smtp_server, self.smtp_port, timeout=10) as server:
                     server.starttls()
                     server.login(self.sender_email, self.sender_password)
                     server.send_message(msg)
-                
                 self.logger.info(f"✅ 이메일 발송 성공: {len(articles)}개 기사")
                 return True
-                
             except smtplib.SMTPException as smtp_err:
                 self.logger.error(f"❌ SMTP 오류 (시도 {attempt + 1}/{retries}): {smtp_err}")
                 if attempt < retries - 1:
@@ -308,24 +298,19 @@ class GamePassNotifier:
 
     def run(self):
         self.logger.info("🔍 Game Pass RSS 피드 확인 시작...")
-        
         try:
             seen_articles = self.load_seen_articles()
             self.logger.info(f"📚 기존 확인한 기사: {len(seen_articles)}개")
-            
             feed = self.fetch_rss_feed()
             if not feed or not feed.entries:
                 self.logger.error("❌ RSS 피드 가져오기 실패 또는 빈 피드")
                 return
-            
             new_articles = []
             with ThreadPoolExecutor(max_workers=4) as executor:
                 results = executor.map(lambda entry: self.process_article(entry, seen_articles), feed.entries[:50])
                 new_articles = [result for result in results if result]
-            
             for article in new_articles:
                 seen_articles.add(self.normalize_url(article['link']))
-            
             if new_articles:
                 self.logger.info(f"📧 {len(new_articles)}개 새 기사 발견, 이메일 발송 중...")
                 if self.send_email(new_articles):
@@ -334,12 +319,11 @@ class GamePassNotifier:
                     self.logger.error("❌ 이메일 발송 실패")
             else:
                 self.logger.info("📭 새로운 Game Pass 소식 없음")
-            
             self.save_seen_articles(seen_articles)
             self.logger.info("✅ 처리 완료!")
-                
         except Exception as e:
             self.logger.error(f"❌ 실행 중 오류: {e}")
+            raise  # 워크플로우 실패를 명시적으로 표시
 
     def test_email(self):
         test_article = [{
