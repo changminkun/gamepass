@@ -116,7 +116,16 @@ class GamePassNotifier:
         all_entries = []
         successful_feeds = 0
         
-        for url in self.rss_urls:
+        # Polygon RSS URL 수정
+        fixed_urls = [
+            "https://feeds.feedburner.com/XboxLivesMajorNelson",
+            "https://www.trueachievements.com/rss/news.aspx", 
+            "https://news.xbox.com/en-us/feed/",
+            "https://www.gamespot.com/feeds/game-news/",
+            "https://www.polygon.com/rss/index.xml"  # 수정된 URL
+        ]
+        
+        for url in fixed_urls:
             self.logger.info(f"시도 중인 RSS 피드: {url}")
             
             for attempt in range(retries):
@@ -173,7 +182,12 @@ class GamePassNotifier:
         
         self.logger.info(f"총 {successful_feeds}개 피드에서 {len(all_entries)}개 기사 수집 완료")
         
-        return {'entries': all_entries} if all_entries else None
+        # FeedParserDict와 유사한 객체 반환
+        class MockFeed:
+            def __init__(self, entries):
+                self.entries = entries
+        
+        return MockFeed(all_entries) if all_entries else None
 
     def normalize_url(self, url):
         parsed = urlparse(url)
