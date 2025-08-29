@@ -38,7 +38,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add seen_articles.json gamepass_notifier.log
+          git add seen_articles.json gamepass_notifier.log || true
           git diff --staged --quiet || git commit -m "업데이트: 확인한 기사 목록 및 로그 갱신 [skip ci]"
           git push
         env:
