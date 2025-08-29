@@ -11,3 +11,22 @@
 2025-08-29 20:05:50,650 [WARNING] https://news.xbox.com/en-us/xbox-game-pass/에서 데이터 가져오기 최종 실패
 2025-08-29 20:05:50,651 [WARNING] 📭 RSS 피드 가져오기 실패 또는 빈 피드, 처리 중단
 2025-08-29 20:05:50,652 [INFO] ✅ 확인한 기사 0개 저장 완료
+2025-08-29 20:12:54,568 [INFO] 확인한 기사 0개 저장 완료
+2025-08-29 20:12:54,568 [INFO] Game Pass RSS 피드 확인 시작...
+2025-08-29 20:12:54,569 [INFO] 기존 확인한 기사: 0개
+2025-08-29 20:12:54,569 [INFO] 시도 중인 RSS 피드: https://feeds.feedburner.com/XboxLivesMajorNelson
+2025-08-29 20:12:56,091 [INFO] 성공: https://feeds.feedburner.com/XboxLivesMajorNelson에서 12개 기사 발견
+2025-08-29 20:12:56,092 [INFO] 시도 중인 RSS 피드: https://www.trueachievements.com/rss/news.aspx
+2025-08-29 20:12:58,008 [WARNING] 403 Forbidden: https://www.trueachievements.com/rss/news.aspx - 다음 피드로 이동
+2025-08-29 20:12:58,009 [INFO] 시도 중인 RSS 피드: https://news.xbox.com/en-us/feed/
+2025-08-29 20:12:59,528 [WARNING] 403 Forbidden: https://news.xbox.com/en-us/feed/ - 다음 피드로 이동
+2025-08-29 20:12:59,529 [INFO] 시도 중인 RSS 피드: https://www.gamespot.com/feeds/game-news/
+2025-08-29 20:13:01,714 [INFO] 성공: https://www.gamespot.com/feeds/game-news/에서 15개 기사 발견
+2025-08-29 20:13:01,715 [INFO] 시도 중인 RSS 피드: https://www.polygon.com/rss/xbox/index.xml
+2025-08-29 20:13:04,204 [ERROR] RSS 피드 요청 실패 (https://www.polygon.com/rss/xbox/index.xml, 시도 1/2): 404 Client Error: Not Found for url: https://www.polygon.com/rss/xbox/index.xml/
+2025-08-29 20:13:08,537 [ERROR] RSS 피드 요청 실패 (https://www.polygon.com/rss/xbox/index.xml, 시도 2/2): 404 Client Error: Not Found for url: https://www.polygon.com/rss/xbox/index.xml/
+2025-08-29 20:13:08,538 [WARNING] https://www.polygon.com/rss/xbox/index.xml에서 데이터 가져오기 최종 실패
+2025-08-29 20:13:08,538 [INFO] 총 2개 피드에서 27개 기사 수집 완료
+2025-08-29 20:13:08,539 [ERROR] 실행 중 오류: 'dict' object has no attribute 'entries'
+2025-08-29 20:13:08,539 [INFO] 확인한 기사 0개 저장 완료
+2025-08-29 20:13:08,539 [INFO] 처리 완료!
