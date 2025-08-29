@@ -111,35 +111,27 @@ class GamePassNotifier:
         }
 
     def fetch_rss_feed(self, retries=2, delay=3):
-        """RSS 피드를 가져오는 함수. 실패한 피드는 건너뛰고 계속 진행"""
+        """안정적인 RSS 피드만 사용"""
         all_entries = []
         successful_feeds = 0
         
-        # Polygon RSS URL 수정
-        fixed_urls = [
+        # 안정적인 피드만 사용 (403 오류 없음)
+        stable_urls = [
             "https://feeds.feedburner.com/XboxLivesMajorNelson",
-            "https://www.trueachievements.com/rss/news.aspx", 
-            "https://news.xbox.com/en-us/feed/",
             "https://www.gamespot.com/feeds/game-news/",
-            "https://www.polygon.com/rss/index.xml"  # 수정된 URL
+            "https://www.polygon.com/rss/index.xml"
         ]
         
-        for url in fixed_urls:
+        for url in stable_urls:
             self.logger.info(f"시도 중인 RSS 피드: {url}")
             
             for attempt in range(retries):
                 try:
                     headers = self.get_random_headers()
-                    # 요청 간 랜덤 지연
                     time.sleep(random.uniform(1, 3))
                     
                     session = requests.Session()
                     response = session.get(url, headers=headers, timeout=15, allow_redirects=True)
-                    
-                    if response.status_code == 403:
-                        self.logger.warning(f"403 Forbidden: {url} - 다음 피드로 이동")
-                        break  # 403이면 재시도하지 않고 다음 URL로
-                    
                     response.raise_for_status()
                     
                     # XML 유효성 검사
@@ -155,19 +147,17 @@ class GamePassNotifier:
                     # feedparser로 파싱
                     feed = self.feed_parser.parse(response.text, request_headers=headers)
                     
-                    if feed.bozo:
+                    if feed.bozo and not feed.entries:
                         self.logger.warning(f"RSS 피드 파싱 경고 ({url}): {feed.bozo_exception}")
-                        # bozo 오류여도 entries가 있으면 계속 진행
-                        if not feed.entries:
-                            if attempt < retries - 1:
-                                continue
-                            else:
-                                break
+                        if attempt < retries - 1:
+                            continue
+                        else:
+                            break
                     
                     self.logger.info(f"성공: {url}에서 {len(feed.entries)}개 기사 발견")
                     all_entries.extend(feed.entries)
                     successful_feeds += 1
-                    break  # 성공하면 다음 URL로
+                    break
                     
                 except requests.exceptions.RequestException as e:
                     self.logger.error(f"RSS 피드 요청 실패 ({url}, 시도 {attempt + 1}/{retries}): {e}")
@@ -231,13 +221,37 @@ class GamePassNotifier:
             self.logger.error(f"파일 저장 오류: {e}")
 
     def is_gamepass_related(self, title, summary):
+        """게임패스 게임 추가/제거 관련 기사만 필터링 (더 엄격하게)"""
         text = (title + " " + (summary or "")).lower()
-        is_related = any(keyword in text for keyword in self.config['gamepass_keywords'])
+        
+        # 추가 관련 키워드 확인
+        is_addition = any(keyword in text for keyword in self.config['addition_keywords'])
+        
+        # 제거 관련 키워드 확인
+        is_removal = any(keyword in text for keyword in self.config['removal_keywords'])
+        
+        # 정규식 패턴으로 한번 더 확인 (더 정확한 매칭)
+        pattern_addition = any(re.search(pattern, text, re.IGNORECASE) for pattern in self.config['add_patterns'])
+        pattern_removal = any(re.search(pattern, text, re.IGNORECASE) for pattern in self.config['remove_patterns'])
+        
+        # 추가 또는 제거 관련이어야 하고, 패턴도 매칭되어야 함
+        is_related = (is_addition or is_removal) and (pattern_addition or pattern_removal)
+        
         if is_related:
-            self.logger.info(f"Game Pass 관련 기사 발견: {title[:50]}...")
+            self.logger.info(f"Game Pass 게임 추가/제거 관련 기사 발견: {title[:50]}...")
+            if is_addition or pattern_addition:
+                self.logger.info("-> 게임 추가 관련")
+            if is_removal or pattern_removal:
+                self.logger.info("-> 게임 제거 관련")
+        else:
+            # 디버깅을 위해 Game Pass가 포함된 기사는 로그에 남김
+            if "game pass" in text:
+                self.logger.info(f"Game Pass 언급되었지만 게임 추가/제거와 무관: {title[:50]}...")
+        
         return is_related
 
     def extract_game_info(self, title, summary):
+        """게임 추가/제거 정보 추출"""
         text = (title + " " + (summary or "")).lower()
         is_addition = any(re.search(pattern, text, re.IGNORECASE) for pattern in self.config['add_patterns'])
         is_removal = any(re.search(pattern, text, re.IGNORECASE) for pattern in self.config['remove_patterns'])
@@ -341,16 +355,16 @@ class GamePassNotifier:
             'ko': {
                 'subject': "Game Pass 업데이트 알림 - {count}개 소식",
                 'header': "Xbox Game Pass",
-                'subheader': "새로운 업데이트가 있습니다!",
+                'subheader': "게임 추가/제거 소식",
                 'stats': "총 {count}개의 새로운 소식",
-                'footer': "GitHub Actions 자동 알림<br>매일 한국 시간 오전 9시, 오후 3시, 오후 9시에 자동으로 확인합니다.<br>Game Pass 게임 목록 변화만 선별하여 알려드립니다."
+                'footer': "GitHub Actions 자동 알림<br>Game Pass 게임 추가/제거 소식만 선별하여 알려드립니다."
             },
             'en': {
                 'subject': "Game Pass Update - {count} New Items",
                 'header': "Xbox Game Pass",
-                'subheader': "New updates are here!",
+                'subheader': "Game additions/removals",
                 'stats': "{count} new updates",
-                'footer': "Automated GitHub Actions Notification<br>Checked daily at 9 AM, 3 PM, 9 PM KST.<br>Curated updates for Game Pass changes."
+                'footer': "Automated GitHub Actions Notification<br>Curated updates for Game Pass additions/removals."
             }
         }
         return templates.get(lang, templates['ko'])
@@ -359,7 +373,7 @@ class GamePassNotifier:
         for attempt in range(retries):
             try:
                 msg = MIMEMultipart('alternative')
-                msg['Subject'] = f"Game Pass 업데이트 알림 - {len(articles)}개 소식"
+                msg['Subject'] = f"Game Pass 게임 추가/제거 알림 - {len(articles)}개 소식"
                 msg['From'] = self.sender_email
                 msg['To'] = self.receiver_email
                 html_content = self.create_email_content(articles)
@@ -407,7 +421,7 @@ class GamePassNotifier:
                     new_articles.append(result)
                     seen_articles.add(self.normalize_url(result['link']))
             
-            self.logger.info(f"총 {processed_count}개 기사 처리, {len(new_articles)}개 새 Game Pass 기사 발견")
+            self.logger.info(f"총 {processed_count}개 기사 처리, {len(new_articles)}개 새 Game Pass 게임 추가/제거 기사 발견")
             
             if new_articles:
                 self.logger.info(f"{len(new_articles)}개 새 기사 발견, 이메일 발송 중...")
@@ -416,7 +430,7 @@ class GamePassNotifier:
                 else:
                     self.logger.error("이메일 발송 실패")
             else:
-                self.logger.info("새로운 Game Pass 소식 없음")
+                self.logger.info("새로운 Game Pass 게임 추가/제거 소식 없음")
                 
         except Exception as e:
             self.logger.error(f"실행 중 오류: {e}")
