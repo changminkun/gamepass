@@ -11,9 +11,12 @@ import time
 import requests
 from requests.exceptions import RequestException
 from concurrent.futures import ThreadPoolExecutor
-from bs4 import BeautifulSoup
-import textwrap
 from urllib.parse import urlparse, urlunparse
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None  # BeautifulSoup 없어도 동작하도록 처리
 
 class GamePassNotifier:
     def __init__(self, smtp_client=None, feed_parser=None, file_handler=None):
@@ -22,7 +25,7 @@ class GamePassNotifier:
         self.feed_parser = feed_parser or feedparser
         self.file_handler = file_handler or {'load': self.load_seen_articles, 'save': self.save_seen_articles}
         
-        # 환경 변수 유효성 검사 강화
+        # 환경 변수 유효성 검사
         required_envs = ['SMTP_SERVER', 'SMTP_PORT', 'SENDER_EMAIL', 'SENDER_PASSWORD', 'RECEIVER_EMAIL']
         missing = [env for env in required_envs if not os.environ.get(env)]
         if missing:
@@ -40,7 +43,10 @@ class GamePassNotifier:
         self.sender_password = os.environ['SENDER_PASSWORD']
         self.receiver_email = os.environ['RECEIVER_EMAIL']
         
-        self.rss_url = "https://news.xbox.com/en-us/feed/"
+        self.rss_urls = [
+            "https://news.xbox.com/en-us/feed/",
+            "https://news.xbox.com/en-us/xbox-game-pass/"
+        ]
         self.seen_articles_file = "seen_articles.json"
         self.config = self.load_config()
 
@@ -92,34 +98,37 @@ class GamePassNotifier:
                 'header': "🎮 Xbox Game Pass",
                 'subheader': "새로운 업데이트가 있습니다!",
                 'stats': "📊 총 {count}개의 새로운 소식",
-                'footer': "🤖 GitHub Actions 자동 알림<br>매일 한국 시간 오전 9시에 자동으로 확인합니다.<br>Game Pass 게임 목록 변화만 선별하여 알려드립니다."
+                'footer': "🤖 GitHub Actions 자동 알림<br>매일 한국 시간 오전 9시, 오후 3시, 오후 9시에 자동으로 확인합니다.<br>Game Pass 게임 목록 변화만 선별하여 알려드립니다."
             },
             'en': {
                 'subject': "🎮 Game Pass Update - {count} New Items",
                 'header': "🎮 Xbox Game Pass",
                 'subheader': "New updates are here!",
                 'stats': "📊 {count} new updates",
-                'footer': "🤖 Automated GitHub Actions Notification<br>Checked daily at 9 AM KST.<br>Curated updates for Game Pass changes."
+                'footer': "🤖 Automated GitHub Actions Notification<br>Checked daily at 9 AM, 3 PM, 9 PM KST.<br>Curated updates for Game Pass changes."
             }
         }
         return templates.get(lang, templates['ko'])
 
     def fetch_rss_feed(self, retries=3, delay=5):
-        for attempt in range(retries):
-            try:
-                response = requests.head(self.rss_url, timeout=5)
-                if response.status_code != 200:
-                    raise RequestException(f"RSS 피드 URL 상태 코드: {response.status_code}")
-                feed = self.feed_parser.parse(self.rss_url)
-                if feed.bozo:
-                    raise ValueError(f"RSS 피드 파싱 오류: {feed.bozo_exception}")
-                self.logger.info(f"RSS 피드에서 {len(feed.entries)}개 기사 발견: {[entry.title for entry in feed.entries]}")
-                return feed
-            except (RequestException, ValueError) as e:
-                self.logger.error(f"RSS 피드 가져오기 실패 (시도 {attempt + 1}/{retries}): {e}")
-                if attempt < retries - 1:
-                    time.sleep(delay)
-        raise Exception("RSS 피드를 가져올 수 없습니다.")
+        all_entries = []
+        for url in self.rss_urls:
+            for attempt in range(retries):
+                try:
+                    response = requests.head(url, timeout=5)
+                    if response.status_code != 200:
+                        raise RequestException(f"RSS 피드 URL 상태 코드 ({url}): {response.status_code}")
+                    feed = self.feed_parser.parse(url)
+                    if feed.bozo:
+                        raise ValueError(f"RSS 피드 파싱 오류 ({url}): {feed.bozo_exception}")
+                    self.logger.info(f"📡 {url}에서 {len(feed.entries)}개 기사 발견: {[entry.title for entry in feed.entries]}")
+                    all_entries.extend(feed.entries)
+                    break
+                except (RequestException, ValueError) as e:
+                    self.logger.error(f"RSS 피드 가져오기 실패 ({url}, 시도 {attempt + 1}/{retries}): {e}")
+                    if attempt < retries - 1:
+                        time.sleep(delay)
+        return {'entries': all_entries} if all_entries else None
 
     def normalize_url(self, url):
         parsed = urlparse(url)
@@ -154,7 +163,7 @@ class GamePassNotifier:
             data = {link: datetime.now().timestamp() for link in seen_articles}
             with open(self.seen_articles_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-            self.logger.info(f"확인한 기사 {len(seen_articles)}개 저장 완료")
+            self.logger.info(f"✅ 확인한 기사 {len(seen_articles)}개 저장 완료")
         except Exception as e:
             self.logger.error(f"파일 저장 오류: {e}")
 
@@ -198,25 +207,25 @@ class GamePassNotifier:
         <head>
             <meta charset="UTF-8">
             <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
                 .container {{ max-width: 600px; margin: 0 auto; }}
-                .header {{ background: linear-gradient(135deg, #107C10, #0E6B0E); color: white; padding: 30px 20px; text-align: center; }}
-                .header h1 {{ margin: 0; font-size: 28px; }}
-                .header p {{ margin: 10px 0 0; opacity: 0.9; }}
+                .header {{ background: #107C10; color: white; padding: 20px; text-align: center; }}
+                .header h1 {{ margin: 0; font-size: 24px; }}
+                .header p {{ margin: 5px 0 0; opacity: 0.9; }}
                 .content {{ padding: 0 20px; }}
-                .article {{ background: #fff; margin: 20px 0; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 4px solid #107C10; }}
-                .article-title {{ font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #107C10; line-height: 1.3; }}
-                .article-meta {{ font-size: 13px; color: #666; margin-bottom: 12px; }}
-                .tags {{ margin-bottom: 15px; }}
-                .tag {{ display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-right: 8px; }}
+                .article {{ background: #fff; margin: 15px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #107C10; }}
+                .article-title {{ font-size: 18px; font-weight: 600; margin-bottom: 10px; color: #107C10; }}
+                .article-meta {{ font-size: 12px; color: #666; margin-bottom: 10px; }}
+                .tags {{ margin-bottom: 10px; }}
+                .tag {{ display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 500; margin-right: 5px; }}
                 .tag-addition {{ background: #d1f2d1; color: #0f5132; }}
                 .tag-removal {{ background: #f8d7da; color: #842029; }}
-                .article-summary {{ margin-bottom: 15px; color: #555; line-height: 1.5; }}
-                .article-link {{ display: inline-block; color: #107C10; text-decoration: none; font-weight: 600; padding: 8px 16px; border: 2px solid #107C10; border-radius: 6px; transition: all 0.3s; }}
+                .article-summary {{ margin-bottom: 10px; color: #555; line-height: 1.5; }}
+                .article-link {{ color: #107C10; text-decoration: none; font-weight: 600; padding: 6px 12px; border: 2px solid #107C10; border-radius: 5px; }}
                 .article-link:hover {{ background: #107C10; color: white; }}
-                .footer {{ text-align: center; margin: 40px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; }}
-                .footer p {{ margin: 5px 0; font-size: 13px; color: #666; }}
-                .stats {{ background: #f0f8f0; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center; }}
+                .footer {{ text-align: center; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }}
+                .footer p {{ margin: 5px 0; font-size: 12px; color: #666; }}
+                .stats {{ background: #f0f8f0; padding: 10px; border-radius: 8px; margin: 15px 0; text-align: center; }}
             </style>
         </head>
         <body>
@@ -258,11 +267,12 @@ class GamePassNotifier:
         </body>
         </html>
         """
-        try:
-            BeautifulSoup(html, 'html.parser')  # HTML 유효성 검사
-        except Exception as e:
-            self.logger.error(f"HTML 파싱 오류: {e}")
-            raise
+        if BeautifulSoup:
+            try:
+                BeautifulSoup(html, 'html.parser')  # HTML 유효성 검사
+            except Exception as e:
+                self.logger.error(f"HTML 파싱 오류: {e}")
+                raise
         return html
 
     def send_email(self, articles, retries=3, delay=5):
@@ -277,19 +287,23 @@ class GamePassNotifier:
                 html_part = MIMEText(html_content, 'html', 'utf-8')
                 msg.attach(html_part)
                 
-                with self.smtp_client(self.smtp_server, self.smtp_port) as server:
+                with self.smtp_client(self.smtp_server, self.smtp_port, timeout=10) as server:
                     server.starttls()
                     server.login(self.sender_email, self.sender_password)
                     server.send_message(msg)
-                    
+                
                 self.logger.info(f"✅ 이메일 발송 성공: {len(articles)}개 기사")
                 return True
                 
-            except Exception as e:
-                self.logger.error(f"❌ 이메일 발송 실패 (시도 {attempt + 1}/{retries}): {e}")
+            except smtplib.SMTPException as smtp_err:
+                self.logger.error(f"❌ SMTP 오류 (시도 {attempt + 1}/{retries}): {smtp_err}")
                 if attempt < retries - 1:
                     time.sleep(delay)
-        self.logger.error("최대 재시도 횟수 초과")
+            except Exception as e:
+                self.logger.error(f"❌ 이메일 발송 중 기타 오류 (시도 {attempt + 1}/{retries}): {e}")
+                if attempt < retries - 1:
+                    time.sleep(delay)
+        self.logger.error("❌ 최대 재시도 횟수 초과")
         return False
 
     def run(self):
@@ -300,8 +314,11 @@ class GamePassNotifier:
             self.logger.info(f"📚 기존 확인한 기사: {len(seen_articles)}개")
             
             feed = self.fetch_rss_feed()
-            new_articles = []
+            if not feed or not feed.entries:
+                self.logger.error("❌ RSS 피드 가져오기 실패 또는 빈 피드")
+                return
             
+            new_articles = []
             with ThreadPoolExecutor(max_workers=4) as executor:
                 results = executor.map(lambda entry: self.process_article(entry, seen_articles), feed.entries[:50])
                 new_articles = [result for result in results if result]
@@ -311,7 +328,10 @@ class GamePassNotifier:
             
             if new_articles:
                 self.logger.info(f"📧 {len(new_articles)}개 새 기사 발견, 이메일 발송 중...")
-                self.send_email(new_articles)
+                if self.send_email(new_articles):
+                    self.logger.info("✅ 이메일 발송 성공")
+                else:
+                    self.logger.error("❌ 이메일 발송 실패")
             else:
                 self.logger.info("📭 새로운 Game Pass 소식 없음")
             
@@ -320,6 +340,17 @@ class GamePassNotifier:
                 
         except Exception as e:
             self.logger.error(f"❌ 실행 중 오류: {e}")
+
+    def test_email(self):
+        test_article = [{
+            'title': 'Hollow Knight: Silksong Available Day One on Game Pass',
+            'link': 'https://news.xbox.com/en-us/2025/08/21/xbox-at-gamescom-2025/',
+            'published': '2025-08-21',
+            'summary': 'Hollow Knight: Silksong will be available day one on Xbox Game Pass.',
+            'is_addition': True,
+            'is_removal': False
+        }]
+        self.send_email(test_article)
 
 if __name__ == "__main__":
     notifier = GamePassNotifier()
