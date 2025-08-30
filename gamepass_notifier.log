@@ -85,3 +85,19 @@
 2025-08-30 03:08:12,255 [INFO] 새로운 Game Pass 게임 추가/제거 소식 없음
 2025-08-30 03:08:12,255 [INFO] 확인한 기사 0개 저장 완료
 2025-08-30 03:08:12,255 [INFO] 처리 완료!
+2025-08-30 06:52:37,325 [INFO] 확인한 기사 0개 저장 완료
+2025-08-30 06:52:37,325 [INFO] Game Pass RSS 피드 확인 시작...
+2025-08-30 06:52:37,325 [INFO] 기존 확인한 기사: 0개
+2025-08-30 06:52:37,326 [INFO] 시도 중인 RSS 피드: https://feeds.feedburner.com/XboxLivesMajorNelson
+2025-08-30 06:52:39,863 [INFO] 성공: https://feeds.feedburner.com/XboxLivesMajorNelson에서 12개 기사 발견
+2025-08-30 06:52:39,863 [INFO] 시도 중인 RSS 피드: https://www.gamespot.com/feeds/game-news/
+2025-08-30 06:52:41,238 [INFO] 성공: https://www.gamespot.com/feeds/game-news/에서 15개 기사 발견
+2025-08-30 06:52:41,239 [INFO] 시도 중인 RSS 피드: https://www.polygon.com/rss/index.xml
+2025-08-30 06:52:44,216 [INFO] 성공: https://www.polygon.com/rss/index.xml에서 10개 기사 발견
+2025-08-30 06:52:44,216 [INFO] 총 3개 피드에서 37개 기사 수집 완료
+2025-08-30 06:52:44,237 [INFO] Game Pass 언급되었지만 게임 추가/제거와 무관: Xbox Is Making It Easier To Pick Back Up Games On ...
+2025-08-30 06:52:44,239 [INFO] Game Pass 언급되었지만 게임 추가/제거와 무관: 3 Game Pass games you need to play this weekend (L...
+2025-08-30 06:52:44,240 [INFO] 총 37개 기사 처리, 0개 새 Game Pass 게임 추가/제거 기사 발견
+2025-08-30 06:52:44,240 [INFO] 새로운 Game Pass 게임 추가/제거 소식 없음
+2025-08-30 06:52:44,240 [INFO] 확인한 기사 0개 저장 완료
+2025-08-30 06:52:44,240 [INFO] 처리 완료!
