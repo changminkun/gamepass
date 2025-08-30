@@ -101,3 +101,17 @@
 2025-08-30 06:52:44,240 [INFO] 새로운 Game Pass 게임 추가/제거 소식 없음
 2025-08-30 06:52:44,240 [INFO] 확인한 기사 0개 저장 완료
 2025-08-30 06:52:44,240 [INFO] 처리 완료!
+2025-08-30 13:04:39,771 [INFO] 확인한 기사 0개 저장 완료
+2025-08-30 13:04:39,771 [INFO] Game Pass RSS 피드 확인 시작...
+2025-08-30 13:04:39,771 [INFO] 기존 확인한 기사: 0개
+2025-08-30 13:04:39,771 [INFO] 시도 중인 RSS 피드: https://feeds.feedburner.com/XboxLivesMajorNelson
+2025-08-30 13:04:42,108 [INFO] 성공: https://feeds.feedburner.com/XboxLivesMajorNelson에서 12개 기사 발견
+2025-08-30 13:04:42,109 [INFO] 시도 중인 RSS 피드: https://www.gamespot.com/feeds/game-news/
+2025-08-30 13:04:44,972 [INFO] 성공: https://www.gamespot.com/feeds/game-news/에서 15개 기사 발견
+2025-08-30 13:04:44,972 [INFO] 시도 중인 RSS 피드: https://www.polygon.com/rss/index.xml
+2025-08-30 13:04:46,302 [INFO] 성공: https://www.polygon.com/rss/index.xml에서 10개 기사 발견
+2025-08-30 13:04:46,302 [INFO] 총 3개 피드에서 37개 기사 수집 완료
+2025-08-30 13:04:46,325 [INFO] 총 37개 기사 처리, 0개 새 Game Pass 게임 추가/제거 기사 발견
+2025-08-30 13:04:46,326 [INFO] 새로운 Game Pass 게임 추가/제거 소식 없음
+2025-08-30 13:04:46,326 [INFO] 확인한 기사 0개 저장 완료
+2025-08-30 13:04:46,326 [INFO] 처리 완료!
